@@ -184,9 +184,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 4. Supabase 初始化与数据存取
   // ==========================================
+
+  // ⚡ 内建默认凭证（自动连接，无需手动配置）
+  // 如果用户在设置面板手动填写了自定义凭证，会优先使用自定义的值
+  const BUILT_IN_SUPABASE_URL = 'https://ggfoederzjwgceongizu.supabase.co';
+  const BUILT_IN_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZm9lZGVyemplZ2Nlb25naXp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MDk3NzYsImV4cCI6MjA2NTE4NTc3Nn0.kEFcZC5MQQPGzLN4gfZTRMm7KnXH5oKFKQMeBKJVXfc';
+
   function initSupabase() {
-    const url = localStorage.getItem('vibe_supabase_url');
-    const key = localStorage.getItem('vibe_supabase_key');
+    const url = localStorage.getItem('vibe_supabase_url') || BUILT_IN_SUPABASE_URL;
+    const key = localStorage.getItem('vibe_supabase_key') || BUILT_IN_SUPABASE_KEY;
     
     if (url && key) {
       try {
@@ -207,6 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
             loadTasks(); // 退登后切回本地 LocalStorage
           }
         });
+
+        updateSyncStatusIndicator(false, '已连接 Supabase，点击登录');
       } catch (err) {
         console.error('Supabase client creation error:', err);
         updateSyncStatusIndicator(false, 'Supabase 配置错误');
