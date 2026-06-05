@@ -1,0 +1,248 @@
+/* Custom CSS for VibeStudy - Gravity Enhanced */
+
+/* 核心变量与极暗背景 */
+:root {
+  --glow-purple: rgba(139, 92, 246, 0.4);
+  --glow-pink: rgba(236, 72, 153, 0.4);
+  --glow-blue: rgba(59, 130, 246, 0.4);
+}
+
+body {
+  background-color: #07050f;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(30, 20, 70, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(60, 15, 60, 0.1) 0px, transparent 50%);
+}
+
+/* 霓虹背景发光晕 */
+.vibe-bg-glow {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  filter: blur(120px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.25;
+  animation: float-glow 25s infinite alternate ease-in-out;
+}
+
+.glow-1 {
+  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  top: -10%;
+  left: 10%;
+  animation-duration: 20s;
+}
+
+.glow-2 {
+  background: radial-gradient(circle, #ec4899 0%, transparent 70%);
+  bottom: 10%;
+  right: -5%;
+  animation-duration: 28s;
+  animation-delay: -5s;
+}
+
+.glow-3 {
+  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+  top: 40%;
+  left: 60%;
+  animation-duration: 35s;
+  animation-delay: -10s;
+}
+
+@keyframes float-glow {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(80px, 60px) scale(1.1);
+  }
+  100% {
+    transform: translate(-50px, -40px) scale(0.9);
+  }
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.4);
+}
+
+/* 番茄钟圆形倒计时动画 */
+.progress-ring-indicator {
+  transition: stroke-dashoffset 0.35s;
+  transform-origin: 50% 50%;
+}
+
+/* 专注模式下的卡片呼吸灯动效 */
+.card-focus-active {
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+/* 物理状态下被捕获元素的动画复位类 */
+.physics-returning {
+  transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1) !important;
+  z-index: 1000 !important;
+}
+
+/* 任务列表条目滑入滑出 */
+.task-item {
+  animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-item.removing {
+  animation: slide-out 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(30px) scale(0.95);
+  }
+}
+
+/* 炫彩按钮扫光 */
+.btn-glow-animate {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow-animate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 20%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-25deg);
+  transition: 0.75s;
+}
+
+.btn-glow-animate:hover::after {
+  left: 120%;
+}
+
+/* 任务完成粒子爆发容器 */
+.particle {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 9999;
+  animation: explode 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes explode {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* Toast 提示框动效 */
+.toast-animate-in {
+  animation: toast-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.toast-animate-out {
+  animation: toast-out 0.25s ease forwards;
+}
+
+@keyframes toast-in {
+  0% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+}
+
+/* 按钮微动效 */
+.timer-mode-btn.active {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #fff;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+}
+
+/* 禁用交互样式 */
+.disabled-drag {
+  pointer-events: none !important;
+}
+
+/* 反重力开启后，隐藏溢出，阻止物理掉落容器滚动 */
+body.physics-mode-active {
+  overflow: hidden !important;
+}
+
+/* 增强任务高亮样式 */
+.priority-high {
+  border-left: 4px solid #ef4444;
+  background: rgba(239, 68, 68, 0.02);
+}
+.priority-medium {
+  border-left: 4px solid #a855f7;
+  background: rgba(168, 85, 247, 0.02);
+}
+.priority-low {
+  border-left: 4px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.02);
+}
+
+/* 复选框发光 */
+.checkbox-glow:checked {
+  background-color: #8b5cf6;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+}

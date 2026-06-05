@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VibeStudy - 智能学习日程管理服务 (重力增强版)</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS v3 via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Supabase Client JS via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Matter.js Physics Engine via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            vibe: {
+              bg: '#07050f',
+              card: 'rgba(15, 12, 33, 0.4)',
+              border: 'rgba(255, 255, 255, 0.08)',
+              borderActive: 'rgba(167, 139, 250, 0.3)',
+              purple: '#8b5cf6',
+              pink: '#ec4899',
+              blue: '#3b82f6',
+              darkPurple: '#2e1065',
+              glow: '#a78bfa'
+            }
+          },
+          fontFamily: {
+            outfit: ['Outfit', 'sans-serif'],
+            inter: ['Inter', 'sans-serif']
+          },
+          boxShadow: {
+            'neon-purple': '0 0 15px rgba(139, 92, 246, 0.35)',
+            'neon-pink': '0 0 15px rgba(236, 72, 153, 0.35)',
+            'neon-blue': '0 0 15px rgba(59, 130, 246, 0.35)',
+            'glass': 'inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.4)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS Stylesheet (for raw animations, particles and scrollbars) -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-vibe-bg text-gray-100 font-inter min-h-screen overflow-x-hidden relative">
+  <!-- 霓虹氛围背景光晕 -->
+  <div class="vibe-bg-glow glow-1"></div>
+  <div class="vibe-bg-glow glow-2"></div>
+  <div class="vibe-bg-glow glow-3"></div>
+
+  <!-- 提示浮窗容器 -->
+  <div id="toast-container" class="fixed top-24 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 relative z-10 min-h-screen" id="app-wrapper">
+    
+    <!-- 头部导航栏 (物理体) -->
+    <header class="physics-body flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-vibe-card border border-vibe-border shadow-glass backdrop-blur-md transition-all duration-300" id="app-header">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-vibe-purple to-vibe-pink flex items-center justify-center shadow-neon-purple text-white">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="animate-pulse">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-outfit font-extrabold text-2xl tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-vibe-glow">VibeStudy</h1>
+          <p class="text-[10px] text-vibe-pink font-semibold uppercase tracking-wider font-outfit">Gravity Enhanced v2.0</p>
+        </div>
+      </div>
+
+      <!-- 统计指标 -->
+      <div class="flex items-center gap-6 bg-black/40 px-6 py-2.5 rounded-xl border border-white/5">
+        <div class="text-center">
+          <span class="block text-lg font-bold font-outfit text-white" id="stat-completed">0/0</span>
+          <span class="text-[10px] text-gray-400">已完成任务</span>
+        </div>
+        <div class="w-px h-8 bg-vibe-border"></div>
+        <div class="text-center">
+          <span class="block text-lg font-bold font-outfit text-vibe-purple" id="stat-focus-time">0m</span>
+          <span class="text-[10px] text-gray-400">专注时长</span>
+        </div>
+        <div class="w-px h-8 bg-vibe-border"></div>
+        <div class="text-center">
+          <span class="block text-lg font-bold font-outfit text-vibe-pink" id="stat-focus-ratio">0%</span>
+          <span class="text-[10px] text-gray-400">专注效率值</span>
+        </div>
+      </div>
+
+      <!-- 交互控制 -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+        <!-- GitHub 登录按钮 -->
+        <button id="github-login-btn" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-vibe-purple/40 hover:bg-slate-800 transition-all duration-300 font-medium text-sm text-gray-200">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          <span id="github-btn-text">连接 GitHub</span>
+        </button>
+
+        <!-- 启动反重力模式按钮 -->
+        <button id="gravity-toggle-btn" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm transition-all duration-300 shadow-neon-purple border border-violet-500/20 active:scale-95">
+          <span id="gravity-icon">🌌</span>
+          <span id="gravity-btn-text">启动 Anti-Gravity 模式</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 主布局网格 -->
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow items-start">
+      <!-- 左栏：专注番茄钟 & AI 拆解器 -->
+      <div class="flex flex-col gap-6 lg:col-span-1">
+        
+        <!-- Vibe 沉浸番茄钟 (物理体) -->
+        <div class="physics-body p-6 rounded-2xl bg-vibe-card border border-vibe-border shadow-glass backdrop-blur-md flex flex-col items-center relative overflow-hidden transition-all duration-300" id="pomodoro-card">
+          <!-- 卡片发光装饰边 -->
+          <div class="absolute inset-0 bg-gradient-to-b from-vibe-purple/10 to-transparent pointer-events-none opacity-40"></div>
+          
+          <div class="w-full flex items-center justify-between border-b border-vibe-border pb-3 mb-6 relative z-10">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">⏱️</span>
+              <h2 class="font-outfit font-bold text-lg text-white">Vibe 专注番茄钟</h2>
+            </div>
+            <!-- 呼吸状态灯 -->
+            <span id="timer-pulse" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] transition-all duration-300"></span>
+          </div>
+
+          <!-- 圆环进度条与倒计时 -->
+          <div class="relative w-52 h-52 flex items-center justify-center mb-6 relative z-10 select-none">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+              <!-- 底环 -->
+              <circle class="text-white/[0.03]" stroke="currentColor" stroke-width="8" fill="transparent" cx="100" cy="100" r="86" />
+              <!-- 进度环 -->
+              <circle id="timer-progress" class="text-vibe-purple transition-all duration-300 stroke-linecap-round" stroke="currentColor" stroke-width="8" stroke-dasharray="540.35" stroke-dashoffset="0" fill="transparent" cx="100" cy="100" r="86" />
+            </svg>
+            <div class="absolute flex flex-col items-center">
+              <span id="timer-time" class="text-4xl font-extrabold font-outfit text-white tracking-wider filter drop-shadow-[0_2px_8px_rgba(139,92,246,0.3)]">25:00</span>
+              <span id="timer-status" class="text-[10px] uppercase font-bold tracking-widest text-vibe-pink mt-1">Academic Study</span>
+            </div>
+          </div>
+
+          <!-- 模式切换按钮 -->
+          <div class="flex gap-2 w-full mb-6 bg-black/30 p-1.5 rounded-xl border border-white/5 relative z-10">
+            <button class="timer-mode-btn flex-1 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-all duration-300 active" data-time="1500" data-mode="focus">专注 (25m)</button>
+            <button class="timer-mode-btn flex-1 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-all duration-300" data-time="300" data-mode="short">短休 (5m)</button>
+            <button class="timer-mode-btn flex-1 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-all duration-300" data-time="900" data-mode="long">长休 (15m)</button>
+          </div>
+
+          <!-- 番茄钟控制按钮 -->
+          <div class="flex gap-3 w-full relative z-10">
+            <button id="timer-start" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-vibe-purple hover:bg-violet-500 font-semibold text-sm transition-all duration-300 shadow-neon-purple text-white active:scale-[0.98]">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>开始</span>
+            </button>
+            <button id="timer-pause" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-semibold text-sm transition-all duration-300 border border-white/5 cursor-not-allowed opacity-50 active:scale-[0.98]" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16"/>
+                <rect x="14" y="4" width="4" height="16"/>
+              </svg>
+              <span>暂停</span>
+            </button>
+            <button id="timer-reset" class="px-4 flex items-center justify-center py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-semibold text-sm transition-all duration-300 border border-white/5 active:scale-[0.98]">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- AI 智能任务拆解器 (物理体) -->
+        <div class="physics-body p-6 rounded-2xl bg-vibe-card border border-vibe-border shadow-glass backdrop-blur-md flex flex-col relative overflow-hidden transition-all duration-300" id="ai-decomposer-card">
+          <div class="absolute inset-0 bg-gradient-to-b from-vibe-pink/5 to-transparent pointer-events-none opacity-40"></div>
+          
+          <div class="w-full flex items-center justify-between border-b border-vibe-border pb-3 mb-4 relative z-10">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">✨</span>
+              <h2 class="font-outfit font-bold text-lg text-white">AI 任务智能拆解</h2>
+            </div>
+            <span class="text-[10px] text-vibe-pink bg-vibe-pink/10 px-2 py-0.5 rounded-full font-bold uppercase border border-vibe-pink/20 tracking-wider">AI Decomposer</span>
+          </div>
+
+          <div class="flex flex-col gap-3 relative z-10 mb-4">
+            <textarea id="ai-input" class="w-full h-20 bg-black/40 border border-vibe-border focus:border-vibe-pink/40 hover:border-white/10 rounded-xl p-3 text-sm text-gray-200 placeholder-gray-500 focus:outline-none transition-all duration-300 resize-none" placeholder="输入你想做的高难度学习目标...&#10;例如：准备6月8日的高级编程语言期末发表"></textarea>
+            
+            <button id="ai-decompose-btn" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-vibe-pink hover:from-pink-500 hover:to-pink-400 font-semibold text-sm transition-all duration-300 shadow-neon-pink text-white active:scale-[0.98]">
+              <span class="decomposer-text">✨ 智能拆解任务</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="animate-spin hidden" id="decomposer-spinner">
+                <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="6.34" y1="17.66" x2="9.17" y2="14.83"/><line x1="14.83" y1="9.17" x2="17.66" y2="6.34"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- 推荐卡片 -->
+          <div class="flex flex-wrap gap-2 mb-4 relative z-10">
+            <span class="suggest-chip text-xs bg-white/[0.03] hover:bg-white/[0.08] hover:border-vibe-pink/30 border border-white/5 px-2.5 py-1 rounded-lg text-gray-400 hover:text-gray-200 cursor-pointer transition-all duration-200" data-text="准备6月8日的高级编程语言期末发表">💻 期末发表</span>
+            <span class="suggest-chip text-xs bg-white/[0.03] hover:bg-white/[0.08] hover:border-vibe-pink/30 border border-white/5 px-2.5 py-1 rounded-lg text-gray-400 hover:text-gray-200 cursor-pointer transition-all duration-200" data-text="撰写并排版3000字的社会学期末研究报告">📝 学术论文</span>
+            <span class="suggest-chip text-xs bg-white/[0.03] hover:bg-white/[0.08] hover:border-vibe-pink/30 border border-white/5 px-2.5 py-1 rounded-lg text-gray-400 hover:text-gray-200 cursor-pointer transition-all duration-200" data-text="复习高等数学下册期末考试，攻克多元微积分与微分方程">🧮 数学复习</span>
+          </div>
+
+          <!-- AI 拆解结果预览 (平滑展开) -->
+          <div id="ai-result-panel" class="hidden flex-col gap-3 relative z-10 border-t border-vibe-border pt-4 mt-2">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">建议分解步骤</h3>
+              <button id="ai-import-btn" class="text-xs text-vibe-pink hover:text-pink-400 border border-vibe-pink/30 hover:border-vibe-pink/60 px-2 py-0.5 rounded-lg font-semibold bg-pink-500/5 transition-all duration-200">一键导入日程</button>
+            </div>
+            <div id="ai-subtasks-preview" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+              <!-- 动态子步骤 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右栏：日程管理看板 -->
+      <div class="flex flex-col gap-6 lg:col-span-2">
+        
+        <!-- 智能学习日程看板 (物理体) -->
+        <div class="physics-body p-6 rounded-2xl bg-vibe-card border border-vibe-border shadow-glass backdrop-blur-md flex flex-col relative overflow-hidden transition-all duration-300 w-full" id="schedule-card">
+          <div class="absolute inset-0 bg-gradient-to-b from-vibe-blue/5 to-transparent pointer-events-none opacity-40"></div>
+          
+          <div class="w-full flex items-center justify-between border-b border-vibe-border pb-3 mb-6 relative z-10">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">📅</span>
+              <h2 class="font-outfit font-bold text-lg text-white">智能学习日程看板</h2>
+            </div>
+            <div class="flex items-center gap-3">
+              <span id="sync-status" class="text-xs text-gray-500 flex items-center gap-1.5 bg-black/30 px-2.5 py-1 rounded-lg border border-white/5 font-medium">
+                <span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse" id="sync-dot"></span>
+                <span id="sync-text">未同步云端 (本地)</span>
+              </span>
+              <button id="clear-completed-btn" class="text-xs text-gray-400 hover:text-white hover:bg-white/5 border border-white/5 hover:border-white/10 px-2.5 py-1.5 rounded-xl transition-all duration-300 font-medium">清理已完成</button>
+            </div>
+          </div>
+
+          <!-- 新建任务表单 -->
+          <form id="task-form" class="flex flex-col gap-3 relative z-10 mb-6 bg-black/30 p-4 rounded-xl border border-white/5">
+            <div class="flex flex-col md:flex-row gap-3">
+              <input type="text" id="task-title-input" class="flex-grow bg-white/5 border border-vibe-border focus:border-vibe-blue/40 rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none transition-all duration-300" placeholder="添加新的学习任务、DDL或项目..." required>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+              <div class="relative w-full sm:w-44">
+                <select id="task-priority" class="w-full appearance-none bg-white/5 border border-vibe-border rounded-xl px-4 py-2.5 text-xs text-gray-300 focus:outline-none focus:border-vibe-blue/40 cursor-pointer font-semibold">
+                  <option value="high" class="text-red-500 bg-[#0c0a1a]">🔴 高优先级</option>
+                  <option value="medium" selected class="text-purple-400 bg-[#0c0a1a]">🟣 中优先级</option>
+                  <option value="low" class="text-blue-400 bg-[#0c0a1a]">🔵 低优先级</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+              </div>
+              <input type="date" id="task-ddl" class="w-full sm:w-auto bg-white/5 border border-vibe-border rounded-xl px-4 py-2.5 text-xs text-gray-300 focus:outline-none focus:border-vibe-blue/40 cursor-pointer font-semibold" required>
+              <button type="submit" class="w-full sm:w-auto ml-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-vibe-blue hover:bg-blue-500 font-semibold text-sm transition-all duration-300 text-white shadow-neon-blue active:scale-[0.98]">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>添加任务</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- 任务日程列表 -->
+          <div class="relative z-10 w-full">
+            <div id="schedule-list" class="flex flex-col gap-3 max-h-[480px] overflow-y-auto pr-1">
+              <!-- 空日程占位图 -->
+              <div id="empty-placeholder" class="py-16 text-center flex flex-col items-center justify-center border border-dashed border-vibe-border rounded-xl bg-black/10">
+                <span class="text-4xl mb-3 filter drop-shadow-[0_2px_10px_rgba(167,139,250,0.2)]">🍃</span>
+                <h3 class="text-gray-400 font-semibold text-sm mb-1">当前学习计划已清空</h3>
+                <p class="text-xs text-gray-600 max-w-xs px-4">快在上方添加一个新挑战，或者写个目标让 AI 帮您进行智能拆解吧！</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 反重力 Matter 辅助画布 Canvas Container (通常透明) -->
+  <div id="physics-canvas-container" class="fixed inset-0 w-full h-full pointer-events-none z-0"></div>
+
+  <!-- 设置面板触发器 -->
+  <button id="settings-trigger" class="fixed bottom-6 right-6 w-11 h-11 rounded-full bg-slate-900 border border-slate-800 hover:border-vibe-purple/40 hover:bg-slate-800 text-gray-300 flex items-center justify-center shadow-lg transition-all duration-300 z-40 active:scale-95" title="连接 Supabase & GitHub 配置">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+
+  <!-- 设置面板抽屉 (侧边弹出) -->
+  <div id="settings-drawer" class="fixed top-0 right-0 w-80 md:w-96 h-full bg-vibe-bg/95 border-l border-vibe-border shadow-2xl backdrop-blur-xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <div class="flex items-center justify-between p-5 border-b border-vibe-border">
+      <h3 class="font-outfit font-extrabold text-lg text-white tracking-wide">系统参数配置</h3>
+      <button id="settings-close" class="text-gray-400 hover:text-white text-2xl font-bold transition-all focus:outline-none">×</button>
+    </div>
+    <div class="flex-grow p-6 overflow-y-auto flex flex-col gap-5">
+      
+      <!-- Supabase 连接 -->
+      <div class="flex flex-col gap-3 bg-black/35 p-4 rounded-xl border border-white/5">
+        <h4 class="text-xs font-bold text-vibe-blue uppercase tracking-wider">☁️ Supabase 接入 (云端持久化)</h4>
+        <div class="flex flex-col gap-2.5">
+          <div class="flex flex-col gap-1">
+            <label for="settings-supabase-url" class="text-[11px] text-gray-400 font-semibold">Supabase Project URL</label>
+            <input type="text" id="settings-supabase-url" class="bg-black/50 border border-vibe-border focus:border-vibe-blue/40 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none" placeholder="https://xxxx.supabase.co">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="settings-supabase-key" class="text-[11px] text-gray-400 font-semibold">Anon API Key</label>
+            <input type="password" id="settings-supabase-key" class="bg-black/50 border border-vibe-border focus:border-vibe-blue/40 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+          </div>
+        </div>
+        <p class="text-[10px] text-gray-500 leading-normal">填入后点击保存并刷新，将自动连接到您的 Supabase 数据库并启用 GitHub 登录，否则将回退使用 LocalStorage 本地存储。</p>
+      </div>
+
+      <!-- AI API 密钥 (用于真实任务拆解) -->
+      <div class="flex flex-col gap-3 bg-black/35 p-4 rounded-xl border border-white/5">
+        <h4 class="text-xs font-bold text-vibe-pink uppercase tracking-wider">🧠 AI 大模型对接 (选填)</h4>
+        <div class="flex flex-col gap-2.5">
+          <div class="flex flex-col gap-1">
+            <label for="settings-api-key" class="text-[11px] text-gray-400 font-semibold">API Key (OpenAI / Gemini)</label>
+            <input type="password" id="settings-api-key" class="bg-black/50 border border-vibe-border focus:border-vibe-pink/40 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none" placeholder="sk-...">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="settings-api-url" class="text-[11px] text-gray-400 font-semibold">API Endpoint (代理地址)</label>
+            <input type="text" id="settings-api-url" class="bg-black/50 border border-vibe-border focus:border-vibe-pink/40 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none" placeholder="https://api.openai.com/v1">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="settings-api-model" class="text-[11px] text-gray-400 font-semibold">Model ID</label>
+            <input type="text" id="settings-api-model" class="bg-black/50 border border-vibe-border focus:border-vibe-pink/40 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none" value="gpt-4o-mini">
+          </div>
+        </div>
+        <p class="text-[10px] text-gray-500 leading-normal">如不填写，AI 智能拆解将自动采用系统内置的本地启发式规则引擎，模拟高度真实的线性拆解步骤。</p>
+      </div>
+
+    </div>
+    
+    <div class="p-4 border-t border-vibe-border bg-black/20">
+      <button id="settings-save-btn" class="w-full py-2.5 rounded-xl bg-vibe-purple hover:bg-violet-500 font-semibold text-sm transition-all duration-300 text-white shadow-neon-purple active:scale-[0.98]">保存配置并刷新</button>
+    </div>
+  </div>
+
+  <!-- 遮罩层 (抽屉打开时) -->
+  <div id="drawer-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden transition-opacity duration-300"></div>
+
+  <!-- 页面控制与物理恢复面板 (当 Anti-Gravity 激活时悬浮在屏幕底部，不参与重力掉落) -->
+  <div id="gravity-recover-bar" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[45] hidden bg-slate-900/80 backdrop-blur-md border border-vibe-purple/40 px-6 py-3.5 rounded-2xl flex items-center gap-4 shadow-[0_4px_30px_rgba(139,92,246,0.3)]">
+    <div class="flex flex-col">
+      <span class="text-xs font-bold text-white flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-violet-400 animate-ping"></span>
+        🌌 Anti-Gravity 状态开启中
+      </span>
+      <span class="text-[10px] text-gray-400 mt-0.5">可用鼠标拖拽、甩飞任何组件，尽情解压</span>
+    </div>
+    <div class="h-6 w-px bg-white/10"></div>
+    <button id="gravity-recover-btn" class="px-4 py-1.5 rounded-lg bg-vibe-purple hover:bg-violet-500 text-xs text-white font-bold transition-all duration-300 active:scale-95 shadow-neon-purple">
+      🚀 恢复物理重力与排版
+    </button>
+  </div>
+
+  <script src="mock_ai.js"></script>
+  <script src="physics.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
