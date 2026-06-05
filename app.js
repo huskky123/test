@@ -43,6 +43,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncDotEl = document.getElementById('sync-dot');
   const syncTextEl = document.getElementById('sync-text');
 
+  // 注册/登录模态框
+  const authModal = document.getElementById('auth-modal');
+  const authModalOverlay = document.getElementById('auth-modal-overlay');
+  const authModalClose = document.getElementById('auth-modal-close');
+  const authTabLogin = document.getElementById('auth-tab-login');
+  const authTabRegister = document.getElementById('auth-tab-register');
+  const authEmail = document.getElementById('auth-email');
+  const authPassword = document.getElementById('auth-password');
+  const authConfirmWrap = document.getElementById('auth-confirm-wrap');
+  const authConfirm = document.getElementById('auth-confirm');
+  const authSubmitBtn = document.getElementById('auth-submit-btn');
+  const authSubmitText = document.getElementById('auth-submit-text');
+  const authSpinner = document.getElementById('auth-spinner');
+  const authMessage = document.getElementById('auth-message');
+  const authSwitchHint = document.getElementById('auth-switch-hint');
+  const authSwitchBtn = document.getElementById('auth-switch-btn');
+  let authMode = 'login'; // 'login' | 'register'
+
   // 反重力控制
   const gravityToggleBtn = document.getElementById('gravity-toggle-btn');
   const gravityRecoverBar = document.getElementById('gravity-recover-bar');
@@ -204,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (session) {
             currentUserId = session.user.id;
             updateGithubButton(session.user);
-            updateSyncStatusIndicator(true, `已连接云端: ${session.user.user_metadata.user_name || session.user.email}`);
+            updateSyncStatusIndicator(true, `已连接云端: ${session.user.email}`);
             loadTasks(); // 登录成功后加载云端数据
           } else {
             currentUserId = null;
@@ -227,21 +245,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateGithubButton(user) {
     if (user) {
-      const avatar = user.user_metadata.avatar_url || '';
-      const name = user.user_metadata.user_name || user.email.split('@')[0];
+      const email = user.email || '';
+      const name = (user.user_metadata && user.user_metadata.display_name) || email.split('@')[0] || '用户';
       
       githubLoginBtn.classList.add('border-vibe-pink/30');
       githubLoginBtn.innerHTML = `
-        <img src="${avatar}" alt="avatar" class="w-5 h-5 rounded-full border border-white/20">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-vibe-pink"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span class="text-vibe-pink font-semibold">${name} (退出)</span>
       `;
     } else {
       githubLoginBtn.classList.remove('border-vibe-pink/30');
       githubLoginBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
         </svg>
-        <span>连接 GitHub</span>
+        <span>注册 / 登录</span>
       `;
     }
   }
@@ -257,6 +276,154 @@ document.addEventListener('DOMContentLoaded', () => {
       syncTextEl.className = 'text-gray-500';
     }
   }
+
+  // ==========================================
+  // 模态框控制与邮箱登录注册逻辑
+  // ==========================================
+  function openAuthModal(defaultMode = 'login') {
+    authMode = defaultMode;
+    switchAuthMode(authMode);
+    authEmail.value = '';
+    authPassword.value = '';
+    authConfirm.value = '';
+    hideAuthMessage();
+    authModal.classList.remove('hidden');
+    setTimeout(() => authEmail.focus(), 100);
+  }
+
+  function closeAuthModal() {
+    authModal.classList.add('hidden');
+  }
+
+  function switchAuthMode(mode) {
+    authMode = mode;
+    if (mode === 'register') {
+      authTabLogin.classList.remove('active-tab');
+      authTabRegister.classList.add('active-tab');
+      authConfirmWrap.classList.remove('hidden');
+      authConfirmWrap.classList.add('flex');
+      authSubmitText.innerText = '创建账号';
+      authSwitchHint.innerText = '已有账号？';
+      authSwitchBtn.innerText = '直接登录';
+    } else {
+      authTabRegister.classList.remove('active-tab');
+      authTabLogin.classList.add('active-tab');
+      authConfirmWrap.classList.add('hidden');
+      authConfirmWrap.classList.remove('flex');
+      authSubmitText.innerText = '登录账号';
+      authSwitchHint.innerText = '还没有账号？';
+      authSwitchBtn.innerText = '立即注册';
+    }
+    hideAuthMessage();
+  }
+
+  function showAuthMessage(text, type = 'error') {
+    authMessage.classList.remove('hidden');
+    if (type === 'success') {
+      authMessage.className = 'text-xs px-3 py-2.5 rounded-lg border font-medium text-emerald-400 bg-emerald-950/60 border-emerald-500/30';
+    } else {
+      authMessage.className = 'text-xs px-3 py-2.5 rounded-lg border font-medium text-red-400 bg-red-950/60 border-red-500/30';
+    }
+    authMessage.innerText = text;
+  }
+
+  function hideAuthMessage() {
+    authMessage.classList.add('hidden');
+    authMessage.innerText = '';
+  }
+
+  function setAuthLoading(loading) {
+    if (loading) {
+      authSubmitBtn.setAttribute('disabled', 'true');
+      authSpinner.classList.remove('hidden');
+    } else {
+      authSubmitBtn.removeAttribute('disabled');
+      authSpinner.classList.add('hidden');
+    }
+  }
+
+  // 模态框关闭
+  authModalClose.addEventListener('click', closeAuthModal);
+  authModalOverlay.addEventListener('click', closeAuthModal);
+
+  // Tab 切换
+  authTabLogin.addEventListener('click', () => switchAuthMode('login'));
+  authTabRegister.addEventListener('click', () => switchAuthMode('register'));
+  authSwitchBtn.addEventListener('click', () => switchAuthMode(authMode === 'login' ? 'register' : 'login'));
+
+  // 提交登录/注册
+  authSubmitBtn.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    const confirm = authConfirm.value;
+
+    if (!email || !password) {
+      showAuthMessage('请填写邮箱和密码');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showAuthMessage('请输入有效的邮箱地址');
+      return;
+    }
+    if (password.length < 6) {
+      showAuthMessage('密码长度至少为 6 个字符');
+      return;
+    }
+
+    if (!supabaseClient) {
+      showAuthMessage('未连接到 Supabase，请先在设置面板配置数据库');
+      return;
+    }
+
+    setAuthLoading(true);
+    hideAuthMessage();
+
+    try {
+      if (authMode === 'register') {
+        if (password !== confirm) {
+          showAuthMessage('两次输入的密码不一致');
+          setAuthLoading(false);
+          return;
+        }
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) throw error;
+        // Supabase 可能需要邮箱验证
+        if (data.user && !data.session) {
+          showAuthMessage('注册成功！请检查您的邮箱并点击验证链接以完成注册。', 'success');
+        } else if (data.session) {
+          showToast('注册并登录成功！欢迎使用 VibeStudy ✨', 'success');
+          closeAuthModal();
+        }
+      } else {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        showToast(`登录成功！欢迎回来 ${email.split('@')[0]} 🌟`, 'success');
+        closeAuthModal();
+      }
+    } catch (err) {
+      const msg = err.message || '操作失败';
+      // 转换常见英文错误为中文
+      if (msg.includes('Invalid login credentials')) {
+        showAuthMessage('邮箱或密码错误，请重试');
+      } else if (msg.includes('User already registered')) {
+        showAuthMessage('该邮箱已被注册，请直接登录');
+        switchAuthMode('login');
+      } else if (msg.includes('Email not confirmed')) {
+        showAuthMessage('邮箱未验证，请检查您的收件笱');
+      } else {
+        showAuthMessage(msg);
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  });
+
+  // Enter 键快捷提交
+  [authEmail, authPassword, authConfirm].forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') authSubmitBtn.click();
+    });
+  });
 
   // ==========================================
   // 5. 任务数据操作 (CRUD)
@@ -903,34 +1070,26 @@ document.addEventListener('DOMContentLoaded', () => {
     window.VibePhysics.restore();
   });
 
-  // GitHub 快捷登录/退出触发
+  // 登录/注册按钮：点击打开模态框或退出
   githubLoginBtn.addEventListener('click', async () => {
-    if (supabaseClient) {
-      if (currentUserId) {
-        // 已登录，执行退出
+    if (currentUserId) {
+      // 已登录 → 退出
+      if (supabaseClient) {
         const { error } = await supabaseClient.auth.signOut();
         if (error) {
           showToast(`退出登录失败: ${error.message}`, 'warning');
         } else {
           showToast('已安全退出登录，切回本地存储模式', 'success');
         }
-      } else {
-        // 未登录，执行 GitHub 登录
-        const { data, error } = await supabaseClient.auth.signInWithOAuth({
-          provider: 'github',
-          options: {
-            // 重定向回当前路径
-            redirectTo: window.location.origin + window.location.pathname
-          }
-        });
-        
-        if (error) {
-          showToast(`无法调用 GitHub OAuth: ${error.message}`, 'warning');
-        }
       }
     } else {
-      showToast('⚠️ 未连接 Supabase，请点击右下角齿轮按钮配置 Supabase Project URL 与 Anon Key！', 'warning');
-      settingsTrigger.click();
+      // 未登录 → 打开模态框
+      if (!supabaseClient) {
+        showToast('⚠️ 未连接 Supabase，请点击右下角齿轮按钮配置数据库！', 'warning');
+        settingsTrigger.click();
+      } else {
+        openAuthModal('login');
+      }
     }
   });
 
